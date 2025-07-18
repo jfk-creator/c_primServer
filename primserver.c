@@ -12,6 +12,25 @@
 #define BACKLOG 10
 #define BUFFER_SIZE 1024
 
+void spawn_new_thread(int new_socket, uint64_t number){
+    pthread_t new_thread; 
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    int *socket_for_thread = malloc(sizeof(int));
+    *socket_for_thread = new_socket;   
+
+    struct routine_args_t *routine_args = malloc(sizeof(routine_args));
+    routine_args->socket = new_socket;
+    routine_args->number = number;
+    if(pthread_create(&new_thread, &attr, routine ,(void*) routine_args) != 0) 
+    {
+        perror("Thread creation failed.");
+    }
+    if(pthread_detach(new_thread) != 0) {
+        perror("Thread not detached");
+    }
+} 
+
 int main() {
     int server_fd, new_socket;
     struct sockaddr_in address;
@@ -77,22 +96,13 @@ int main() {
             buffer[bytes_received] = '\0';
             printf("Received from client: %s\n", buffer);
         }
-        pthread_t new_thread; 
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        int *socket_for_thread = malloc(sizeof(int));
-        *socket_for_thread = new_socket;
-       
-
-        struct routine_args_t *routine_args = malloc(sizeof(routine_args));
-        routine_args->socket = new_socket;
-        routine_args->number = atoi(buffer);
-        printf("maint thread: number-> %d\n", routine_args->number);
-        if(pthread_create(&new_thread, &attr, routine ,(void*) routine_args) != 0) 
-        {
-            perror("Thread creation failed.");
+        if(strncmp("wait", buffer, 4) == 0) {
+            printf("I should wait\n");
+        } else {
+            spawn_new_thread(new_socket, strtoull(buffer, NULL, 10));
         }
-   }
+
+    }
 
     close(server_fd);
     printf("Server shut down.\n");
